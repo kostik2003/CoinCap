@@ -1,7 +1,8 @@
 import { PrismaClient } from '@prisma/client'
-import express from 'express'
+import express, { Router } from 'express'
 
 const prisma = new PrismaClient()
+
 const app = express()
 
 app.use(express.json())
@@ -32,7 +33,6 @@ app.post(`/user`, async (req, res) => {
     })
     res.json(resoult)
 })
-
 
 app.post(`/coin`, async (req, res) => {
     const { title, content, authorEmail } = req.body

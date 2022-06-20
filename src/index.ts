@@ -1,11 +1,29 @@
 import { PrismaClient } from '@prisma/client'
 import express, { Router } from 'express'
+const bcrypt = require("bcrypt");
 
 const prisma = new PrismaClient()
 
 const app = express()
 
+app.set("view engine", "ejs")
+app.use(express.urlencoded({extended: false}))
+
 app.use(express.json())
+
+app.get (`/`, async(req, res) => {
+    res.render("index")
+})
+
+app.get (`/users/register`, (req, res) => {
+    res.render("register")
+}) 
+app.get (`/users/login`, (req, res) => {
+    res.render("login")
+}) 
+app.get (`/users/dashboard`, (req, res) => {
+    res.render("dashboard")
+}) 
 
 app.get(`/users`, async (req, res) => {
     const users = await prisma.user.findMany()
@@ -27,10 +45,46 @@ app.get(`/coin/:id`, async (req, res) => {
     res.json(coin)
 })
 
-app.post(`/user`, async (req, res) => {
+
+// app.post(`/users/register`, async (req, res) => {
+//     const { email, password, name, password2, id, } = req.body
+//     console.log({
+//         name,
+//         email,
+//         password,
+//         password2,
+
+//     })
+// })
+app.post(`/users/register`, async (req, res) => {
+    const { email, password, name, password2, id, } = req.body
     const resoult = await prisma.user.create({
-        data: { ...req.body },
+        data: {
+            name,
+            email,  
+            password,
+             // TODO не работает сравнение двух паролей.
+        },
+        
     })
+    let errors = [];
+    
+    if(password != password2) {
+        errors.push({message: "Passwords do not match"})
+    };
+    if(!name || !email || !password || !password2){
+        errors.push ({message: "Please enter all fields"})
+    };
+    if(password.length > 5) {
+        errors.push({message: "Plassword should be at least 6 characters "})
+    }
+    if(errors.length > 0) {
+        res.render("register", { errors })
+    }
+    let hashedPassword = await bcrypt.hash(password, 10);
+    console.log(hashedPassword)
+    
+
     res.json(resoult)
 })
 

@@ -1,10 +1,15 @@
 import { PrismaClient } from '@prisma/client'
 import express, { Router } from 'express'
+import { userInfo } from 'os';
 const bcrypt = require("bcrypt");
+const jwt = require('jsonwebtoken')
+const { v4: uuidv4 } = require('uuid');
 
 const prisma = new PrismaClient()
 
 const app = express()
+
+
 
 app.set("view engine", "ejs")
 app.use(express.urlencoded({extended: false}))
@@ -46,46 +51,48 @@ app.get(`/coin/:id`, async (req, res) => {
 })
 
 
-// app.post(`/users/register`, async (req, res) => {
-//     const { email, password, name, password2, id, } = req.body
-//     console.log({
-//         name,
-//         email,
-//         password,
-//         password2,
+app.post('/users/login', async (req, res) => {
+    const {email, password} = req.body;
+    const existingUser = await prisma.user.findUnique({
+            where: {
+                email
+            }
+        }
+    )
+    const validPassword = await bcrypt.compare(password, existingUser?.password)
+    if(!existingUser) {
+        res.status(403)
+        throw new Error('Invalid Login credenteils')
+    }
+})
 
-//     })
-// })
 app.post(`/users/register`, async (req, res) => {
-    const { email, password, name, password2, id, } = req.body
-    const resoult = await prisma.user.create({
+    const { email, password, name} = req.body
+    const jti = uuidv4();
+    const userFind = await prisma.user.findUnique({
+        where: {
+            email
+        },
+        select: {
+            email: true
+        }
+    }
+    )
+    if(userFind)   {
+        console.log('user is created')
+    } 
+    if (!userFind) 
+    {
+        let hashedPassword = await bcrypt.hash(password, 10);
+        console.log(hashedPassword)
+        const resoult = await prisma.user.create({
         data: {
             name,
             email,  
             password,
-             // TODO не работает сравнение двух паролей.
         },
-        
     })
-    let errors = [];
-    
-    if(password != password2) {
-        errors.push({message: "Passwords do not match"})
-    };
-    if(!name || !email || !password || !password2){
-        errors.push ({message: "Please enter all fields"})
-    };
-    if(password.length > 5) {
-        errors.push({message: "Plassword should be at least 6 characters "})
     }
-    if(errors.length > 0) {
-        res.render("register", { errors })
-    }
-    let hashedPassword = await bcrypt.hash(password, 10);
-    console.log(hashedPassword)
-    
-
-    res.json(resoult)
 })
 
 app.post(`/coin`, async (req, res) => {
